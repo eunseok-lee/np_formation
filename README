@@ -1,0 +1,53 @@
+##########################################################
+# Simulation of nanoparticles formation
+# written by Eunseok Lee
+# v1: Sep 01, 2017
+##########################################################
+
+The program simulates the formation of silver nanoparticles. The number of nanoparticles is counted by classifying the structure of nanoparticles into single-crystal and icosahedral structures. For further information, refer to The Journal of Physical Chemistry C 122, 1333-1344 (2018).
+
+To compile the code, move to 'src' directory and type 'make' at the prompt as follows.
+
+>> make
+
+The program was written in C and in parallel version using MPI. Hence, an MPI C-compiler should be pre-installed for compilation. The provided Makefile uses mpicc.
+
+The compilation will build an executable, kmc_ccp_mpi. You can copy this executable to other location but two supplemental files (param.dat and ef_atoms) must be provided in the same directories the executable.
+
+To run the executable, the following parameters must be provided.
+
+1) Nparticles: the number of particles at initial step
+2) Natoms_per_particle_ini: the number of atoms per particle at initial step
+3) Natoms_instant_trans: the critical number of atoms for instantaneous coalescence
+4) maxKMCstep: the maximum number of KMC steps
+5) T: simulation temperature, corresponding to the synthesis temperature of nanoparticles
+6) eb0: the activation energy barrier for atom's hopping on surface
+7) dispfreq: the frequency of displaying and storing the results
+8) store_range_to_finalstep: the results will be stored at every KMC step after KMC step of this parameter.
+
+These parameters should be provided in param.dat and param.dat must be placed in the same directory as the executable.
+
+In addition to the parameters in param.dat, the enthalpy of formation (Ef) of nanoparticles as a function of the number of atoms and the structure of particles must be provided. The included ef_atoms.dat is the parametrized Ef for the silver nanoparticles based on first-principles calculations - column 1 and 2 are for single crystal and icosahedral structure of silver nanoparticles. This ef_atoms.dat also need to be placed in the same directory as the executable.
+
+The results from running the program will be stored in the directory, dir_result, (it will be created if not existing). The following list shows the results to be stored.
+
+1) event_time.dat: the log of event and time at each KMC step
+2) final_result.dat: row 1 - the last KMC step and the simulation time, row 2-end - the number of atoms (column 1) and structure type (column 2) of each particle
+3) on_the_fly_data****.dat: row 1 - the current KMC step and the simulation time, row 2-end - the number of atoms (column 1) and structure type (column 2) of each particle
+4) almost_final_data****.dat: row 1 - the current KMC step and the simulation time, row 2-end - the number of atoms (column 1) and structure type (column 2) of each particle
+
+The file 1) contains the information as follows.
+Col1&2,  the number of atoms and structure type of particle from which atoms transfer
+Col3&4,  the number of atoms and structure type of particle to which atoms transfer
+Col5&6,  the number of atoms and structure type of resultant particle
+Col7,    the simulation time
+Col8,    random number that was used for event selection
+Col9&10, the number of atoms summed over all particles in each structure type
+
+The files 2)-4) have the same format but store the information at different KMC steps.
+
+The included example inputs, outputs, and .dat files are for silver nanoparticles in two structures (single-crystal vs. icosahedral) up to 12,000 atoms. However, thee program can be applied for other nanoparticle systems with bigger size and more kinds of structures if ef_atoms.dat is provided correctly.
+
+* * *
+The current version doesn't account for the facet dependence of atom's hopping on particle surface. It will be implemented into the next version.
+
