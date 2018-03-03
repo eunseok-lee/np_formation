@@ -442,6 +442,12 @@ int main(int argc, char **argv)
     fclose(fp);
     fclose(fp2);
 
+	if (numprocs > 1)
+		if (rank == MASTER) {
+			printf("The job ended.  MPI_Abort-related errors might show up because of a few\n");
+			printf("slave-workers still in loop. However, all outputs were produced correctly.\n");
+			printf("--------------------------------------------------------------------------\n\n");
+		}
 	MPI_Abort(MPI_COMM_WORLD,1);
 }
 
