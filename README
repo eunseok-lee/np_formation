@@ -42,7 +42,7 @@ Col3&4,  the number of atoms and structure type of particle to which atoms trans
 Col5&6,  the number of atoms and structure type of resultant particle
 Col7,    the simulation time
 Col8,    random number that was used for event selection
-Col9&10, the number of atoms summed over all particles in each structure type
+Col9&10, the ids of two coalescent particles
 
 The files 2)-4) have the same format but store the information at different KMC steps.
 
