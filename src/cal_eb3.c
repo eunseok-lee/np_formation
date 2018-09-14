@@ -3,7 +3,7 @@
 #include <math.h>
 
 double identify_tst(double*, int, double);
-double identify_tst2(double*, int, double*, int, int, int, int);
+double identify_tst2(double*, int, int, double*, int, int, int, int);
 
 void cal_eb3(double *eb, double *ef_tr, int n1, int n2, int crystal1, int crystal2, double *ef_atoms, int n_crystal_type, double *eb0, int natoms_c) {
     
@@ -47,7 +47,7 @@ void cal_eb3(double *eb, double *ef_tr, int n1, int n2, int crystal1, int crysta
     *(ef_tr + len_ef_n2-1) = *(ef_atoms + n_crystal_type*(n1+n2-1) + crystal1);
 //    for (i=0;i<len_ef_n2;i++)
 //        printf("ef_tr[%d] = %f\n",i,*(ef_tr+i));
-    eb21 = identify_tst(ef_tr,len_ef_n2,eb0[crystal2]);
+    eb21 = identify_tst(ef_tr,len_ef_n2, fmax(eb0[crystal2],eb0[crystal1]) );
 //    printf("cluster2(%d)->cluster1(%d): eb = %f\n",crystal2,crystal1,eb21);
 
     // crystal1 -> crystal2
@@ -60,7 +60,7 @@ void cal_eb3(double *eb, double *ef_tr, int n1, int n2, int crystal1, int crysta
     *(ef_tr + len_ef_n1-1) = *(ef_atoms + n_crystal_type*(n1+n2-1) + crystal2);
 //    for (i=0;i<len_ef_n1;i++)
 //        printf("ef_tr[%d] = %f\n",i,*(ef_tr+i));
-    eb12 = identify_tst(ef_tr,len_ef_n1,eb0[crystal1]);
+    eb12 = identify_tst(ef_tr,len_ef_n1, fmax(eb0[crystal1],eb0[crystal2]) );
 //    printf("cluster1(%d)->cluster2(%d): eb = %f\n",crystal1,crystal2,eb12);
     
     if (crystal1==crystal2)
@@ -89,7 +89,7 @@ void cal_eb3(double *eb, double *ef_tr, int n1, int n2, int crystal1, int crysta
             *(ef_tr + len_ef_n1+len_ef_n2-2) = *(ef_atoms + n_crystal_type*(n1+n2-1) + ii);
 //            for (i=0;i<len_ef_n1+len_ef_n2-1;i++)
 //                printf("ef_tr[%d] = %f\n",i,*(ef_tr+i));
-            eb12 = identify_tst2(ef_tr,len_ef_n1+len_ef_n2-1,eb0,crystal1,len_ef_n1,crystal2,len_ef_n2);
+            eb12 = identify_tst2(ef_tr,len_ef_n1+len_ef_n2-1,ii,eb0,crystal1,len_ef_n1,crystal2,len_ef_n2);
             
             // cluster 2 and then 1 transforms
             *(ef_tr + 0) = *(ef_atoms + n_crystal_type*(n1-1) + crystal1) + *(ef_atoms + n_crystal_type*(n2-1) + crystal2);
@@ -101,7 +101,7 @@ void cal_eb3(double *eb, double *ef_tr, int n1, int n2, int crystal1, int crysta
             *(ef_tr + len_ef_n1+len_ef_n2-2) = *(ef_atoms + n_crystal_type*(n1+n2-1) + ii);
             //            for (i=0;i<len_ef_n1+len_ef_n2-1;i++)
             //                printf("ef_tr[%d] = %f\n",i,*(ef_tr+i));
-            eb21 = identify_tst2(ef_tr,len_ef_n1+len_ef_n2-1,eb0,crystal2,len_ef_n2,crystal1,len_ef_n1);
+            eb21 = identify_tst2(ef_tr,len_ef_n1+len_ef_n2-1,ii,eb0,crystal2,len_ef_n2,crystal1,len_ef_n1);
             
             *(eb + ii) = fmin(eb12,eb21);
         }

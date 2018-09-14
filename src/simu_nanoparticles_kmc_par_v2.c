@@ -34,7 +34,9 @@ int main(int argc, char **argv)
     int Nparticles, Natoms_per_particle_ini, Natoms_instant_trans;
     int maxKMCstep;
     int dispfreq;
-    double T, kT;
+    double T_ini, T_end;
+    double *kT;
+    double *T_profile;
     double eb0[2];
     int store_range_to_finalstep;
 
@@ -58,6 +60,8 @@ int main(int argc, char **argv)
 
 
     char paramfilename[100];
+    char T_filename[100];
+    T_filename[0] = '\0';
 //    if (argc==1) {
 //        printf("Issue: no parameter name, param.dat is used\n");
     strcpy(paramfilename,"param.dat");
@@ -107,14 +111,32 @@ int main(int argc, char **argv)
             if (rank == MASTER)
                 printf("maxKMCstep = %d\n",maxKMCstep);
         }
-        strcpy(param_name,"T");
+        strcpy(param_name,"T_ini");
         param_name_len = strlen(param_name);
         strncpy(dummy,buff_line,param_name_len);
         dummy[param_name_len] = '\0';
         if (strcmp(dummy,param_name)==0) {
-            sscanf(buff_line,"%s %lf",dummy,&T);
+            sscanf(buff_line,"%s %lf",dummy,&T_ini);
             if (rank == MASTER)
-                printf("T = %f\n",T);
+                printf("T_ini = %f\n",T_ini);
+        }
+        strcpy(param_name,"T_end");
+        param_name_len = strlen(param_name);
+        strncpy(dummy,buff_line,param_name_len);
+        dummy[param_name_len] = '\0';
+        if (strcmp(dummy,param_name)==0) {
+            sscanf(buff_line,"%s %lf",dummy,&T_end);
+            if (rank == MASTER)
+                printf("T_end = %f\n",T_end);
+        }
+        strcpy(param_name,"T_filename");
+        param_name_len = strlen(param_name);
+        strncpy(dummy,buff_line,param_name_len);
+        dummy[param_name_len] = '\0';
+        if (strcmp(dummy,param_name)==0) {
+            sscanf(buff_line,"%s %s",dummy,T_filename);
+            if (rank == MASTER)
+                printf("T_filename = %s\n",T_filename);
         }
         strcpy(param_name,"eb0");
         param_name_len = strlen(param_name);
@@ -143,7 +165,7 @@ int main(int argc, char **argv)
         if (strcmp(dummy,param_name)==0) {
             sscanf(buff_line,"%s %d",dummy,&store_range_to_finalstep);
             if (rank == MASTER)
-                printf("dispfreq = %d\n",store_range_to_finalstep);
+                printf("storage_range_to_finalstep = %d\n",store_range_to_finalstep);
         }
         
 //        else
@@ -157,8 +179,28 @@ int main(int argc, char **argv)
             printf("Issue: Natoms_instant_trans is < 1, adjusted to 1\n");
     }
     
-    kT = 0.02585199/300 * T;
+    T_profile = (double*) calloc(maxKMCstep,sizeof(double));
+    kT = (double*) calloc(maxKMCstep,sizeof(double));
+    if (strlen(T_filename)==0) {
+        printf("kT is obtained from T_ini and T_end.\n");
+        tmp = (T_end-T_ini)*1.0/(maxKMCstep-1);
+        for (i=0; i<maxKMCstep; i++) {
+            *(T_profile+i)  = tmp*i+T_ini;
+            *(kT+i) = 0.02585199/300 * (tmp*i+T_ini);
+        }
+    }
+    else {
+        printf("kT is obtained from existing profile.\n");
+        load_double_mat(T_profile,maxKMCstep,1,T_filename);
+        for (i=0; i<maxKMCstep; i++) {
+            tmp = *(T_profile+i);
+            *(kT+i) = 0.02585199/300 * tmp;
+        }
+    }
 
+//    for (i=0; i<maxKMCstep; i++)
+//        printf("T_profile[%d]=%f, kT[%d]=%f\n",i,T_profile[i],i,kT[i]);
+    
 //    printf("Nparticles=%d, Natoms_per_particle_ini=%d, Natoms_instant_trans=%d, maxKMCstep=%d, kT=%f, eb0=%f, dispfreq=%d\n",Nparticles, Natoms_per_particle_ini, Natoms_instant_trans, maxKMCstep, kT, eb0, dispfreq);
 
     
@@ -217,8 +259,8 @@ int main(int argc, char **argv)
 //        *(pr+i) = 0.1;
 //        printf("pr[%d] = %f\n",i,*(pr+i));
 //    }
-    if (rank == MASTER)
-        printf("pr was initialized: size of %d by %d\n",Nparticles*(Nparticles-1)/2,n_crystal_type);
+//    if (rank == MASTER)
+//        printf("pr was initialized: size of %d by %d\n",Nparticles*(Nparticles-1)/2,n_crystal_type);
 //    pr_norm = (double*) calloc(Nparticles*(Nparticles-1)/2, sizeof(double));
     
     // pr division for MPI
@@ -289,13 +331,13 @@ int main(int argc, char **argv)
     //            printf("K(%d,:)=%d,%d,n1=%d,n2=%d,cry1=%d,cry2=%d\n",i,p1,p2,n1,n2,crystal1,crystal2);
     //            cal_eb(eb,ef_tr,n1,n2,crystal1,crystal2,ef_atoms,n_crystal_type,eb0);
                 cal_eb3(eb,ef_tr,n1,n2,crystal1,crystal2,ef_atoms,n_crystal_type,eb0,Natoms_instant_trans);
-    //            printf("eb=(%f, %f)\n",eb[0],eb[1]);
+//                printf("eb=(%f, %f)\n",eb[0],eb[1]);
                 for (j=0;j<n_crystal_type;j++) {
-                    tmp = pow(cbrt(n1) + cbrt(n2),2) * sqrt(T)*sqrt(n1+n2)/sqrt(n1*n2) * exp(-eb[j]/kT);
+                    tmp = pow(cbrt(n1) + cbrt(n2),2) * sqrt(T_profile[KMCstep])*sqrt(n1+n2)/sqrt(n1*n2) * exp(-eb[j]/kT[KMCstep]);
                     *(pr+n_crystal_type*i+j) = tmp;
                 }
             }
-			//printf("pr was calculated on MASTER\n");
+			// printf("pr was calculated on MASTER\n");
             // pr calculation result from WORKERs
             for (i=1;i<numprocs;i++) {
                 mtype = FROM_WORKER;
@@ -317,8 +359,8 @@ int main(int argc, char **argv)
                 }
             }
 //            printf("pr was received from WORKERS\n");
-//			for (i=0;i<Ksize_row;i++)
-//				printf("pr[%d,:] = [%f\t%f]\n",i,*(pr+n_crystal_type*i+0),*(pr+n_crystal_type*i+1));
+/*			for (i=0;i<Ksize_row;i++)
+				printf("pr[%d,:] = [%f\t%f]\n",i,*(pr+n_crystal_type*i+0),*(pr+n_crystal_type*i+1));*/
             if (ctr == 0)
                 break;
 
@@ -355,8 +397,9 @@ int main(int argc, char **argv)
             rand2 = (double)rand() / RAND_MAX;
             t = t - log(rand2)/lambda;
             
-			fprintf(fp2,"%d %d %f %f %d %d\n",clstr_natoms[cid1],clstr_crystal_type[cid1],t,rand1,cid1,cid2);
-            
+            fprintf(fp2,"%d %d %f %f %d %d\n",clstr_natoms[cid1],clstr_crystal_type[cid1],t,rand1,cid1,cid2);
+//            printf("kT=%f, %d %d %f %f %d %d\n",kT[KMCstep],clstr_natoms[cid1],clstr_crystal_type[cid1],t,rand1,cid1,cid2);
+
             if (KMCstep%dispfreq==0) {
                 sprintf(filename1,"%s/on_the_fly_data%04d.dat",dirname,KMCstep/dispfreq);
                 fp = fopen(filename1,"w");
@@ -418,7 +461,7 @@ int main(int argc, char **argv)
                     cal_eb3(eb,ef_tr,n1,n2,crystal1,crystal2,ef_atoms,n_crystal_type,eb0,Natoms_instant_trans);
 //                    printf("Rank%d: eb=(%f, %f)\n",rank,eb[0],eb[1]);
                     for (j=0;j<n_crystal_type;j++) {
-                        tmp = pow(cbrt(n1) + cbrt(n2),2) * sqrt(T)*sqrt(n1+n2)/sqrt(n1*n2) * exp(-eb[j]/kT);
+                        tmp = pow(cbrt(n1) + cbrt(n2),2) * sqrt(T_profile[KMCstep])*sqrt(n1+n2)/sqrt(n1*n2) * exp(-eb[j]/kT[KMCstep]);
                         *(pr_tmp+n_crystal_type*i+j) = tmp;
                         lambda = lambda + tmp;
 //                        printf("Rank:%d,p.r.(%d,%d) = pr(%d) = %f, lambda = %f\n",rank,i,j,n_crystal_type*i+j,*(pr_tmp+n_crystal_type*i+j),lambda);
