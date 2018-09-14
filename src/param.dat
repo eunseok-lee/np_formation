@@ -4,6 +4,6 @@ Natoms_per_particle_ini      1
 Natoms_instant_trans      1
 maxKMCstep    100
 T   600 
-eb0     0.3 
+eb0     0.1 0.3 
 dispfreq     2
 store_range_to_finalstep 50
